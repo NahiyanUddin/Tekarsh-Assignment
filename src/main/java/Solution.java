@@ -5,33 +5,63 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import com.opencsv.CSVWriter;
+
+import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+
 public class Solution  {
 
+    public static void writeArrayListToCSV(CSVWriter csvWriter, ArrayList<String> arrayList){
+        int size = arrayList.size();
+        String [] array = new String[size];
+
+        for(int i = 0; i<size ; i++){
+            array[i] = arrayList.get(i);
+        }
+        // writing the row in the csv
+        csvWriter.writeNext(array);
+    }
+
     public static void main(String [] args){
+        String output_csv_file = "./CBOE.csv";
+        String url = "https://finance.yahoo.com/quote/%5EVIX/history?p=%5EVIX";
+
         try {
+            // Initializing the csv writer
+            Writer writer = Files.newBufferedWriter(Paths.get(output_csv_file));
+            CSVWriter csvWriter = new CSVWriter(writer);
+
             // Extracting the html of the specified webpage as a document
-            Document doc = Jsoup.connect("https://finance.yahoo.com/quote/%5EVIX/history?p=%5EVIX").get();
+            Document doc = Jsoup.connect(url).get();
+
+            //Extracting the table
+            Elements table = doc.getElementsByTag("tbody");
 
             // Extracting all the rows of the specified table
-            Elements tableRows = doc.getElementsByTag("tr");
+            Elements tableRows = table.first().getElementsByTag("tr");
 
             // Extracting the table headers
-            Elements tableHeaders = tableRows.first().getElementsByTag("th");
-            System.out.println("Table Headers");
+            Elements tableHeaders = doc.getElementsByTag("th");
+
+            ArrayList<String> headersArray = new ArrayList<String>();
+
             for (Element tableHeader : tableHeaders){
                 Elements headerElement = tableHeader.getElementsByTag("span");
 
                 if(!headerElement.isEmpty()){
                     String header = headerElement.html();
-                    System.out.println(header);
+                    headersArray.add(header);
                 }
                 else{
-                    System.out.println("null");
+                    headersArray.add("");
                 }
             }
+            writeArrayListToCSV(csvWriter,headersArray);
 
             // For each row, we have extract each individual data
-            int i = 0;  // for indexing the rows
             for (Element row:tableRows){
                 // Getting all the table data in a row
                 // here tableData will have the <td></td> tag
@@ -40,8 +70,7 @@ public class Solution  {
                     continue;
                 }
 
-                System.out.println("row"+i);
-
+                ArrayList<String> dataArray = new ArrayList<String>();
                 for (Element datum:tableData){
                     // from each tableData we have to extract the data-element
                     // data-element will have the <span></span> tag
@@ -50,14 +79,20 @@ public class Solution  {
                     if(!dataElement.isEmpty()){ // checking if empty
                         // extracting the value from <span> </span> tag
                         String data = dataElement.html();
-                        System.out.println(data);
+                        dataArray.add(data);
                     }
                     else {
-                        System.out.println("null");
+                        dataArray.add("-");
                     }
                 }
-                i+=1;
+
+                // writing the row in the csv
+                writeArrayListToCSV(csvWriter,dataArray);
             }
+
+            // closing the csv writer
+            csvWriter.close();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
